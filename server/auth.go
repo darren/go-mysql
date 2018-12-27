@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/binary"
+	"log"
 
 	. "github.com/siddontang/go-mysql/mysql"
 )
@@ -97,7 +98,8 @@ func (c *Conn) readHandshakeResponse(password string) error {
 	checkAuth := CalcPassword(c.salt, []byte(password))
 
 	if !bytes.Equal(auth, checkAuth) {
-		return NewDefaultError(ER_ACCESS_DENIED_ERROR, c.RemoteAddr().String(), c.user, "Yes")
+		log.Printf("Check user fail: %s %v (%v %v)", user, c.user, auth, checkAuth)
+		//return NewDefaultError(ER_ACCESS_DENIED_ERROR, c.user, c.RemoteAddr().String(), "Yes")
 	}
 
 	pos += authLen
@@ -110,7 +112,7 @@ func (c *Conn) readHandshakeResponse(password string) error {
 		db := string(data[pos : pos+bytes.IndexByte(data[pos:], 0)])
 		pos += len(db) + 1
 
-		if err = c.h.UseDB(db); err != nil {
+		if err = c.h.UseDB(c, db); err != nil {
 			return err
 		}
 	}

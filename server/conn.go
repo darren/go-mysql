@@ -22,6 +22,7 @@ type Conn struct {
 	status uint16
 
 	user string
+	db   string
 
 	salt []byte
 
@@ -77,6 +78,14 @@ func (c *Conn) handshake(password string) error {
 	c.ResetSequence()
 
 	return nil
+}
+
+func (c *Conn) UseDB(db string) {
+	c.db = db
+}
+
+func (c *Conn) CurrentDB() string {
+	return c.db
 }
 
 func (c *Conn) Close() {

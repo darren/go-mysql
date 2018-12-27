@@ -10,10 +10,10 @@ import (
 
 type Handler interface {
 	//handle COM_INIT_DB command, you can check whether the dbName is valid, or other.
-	UseDB(dbName string) error
+	UseDB(conn *Conn, dbName string) error
 	//handle COM_QUERY comamnd, like SELECT, INSERT, UPDATE, etc...
 	//If Result has a Resultset (SELECT, SHOW, etc...), we will send this as the repsonse, otherwise, we will send Result
-	HandleQuery(query string) (*Result, error)
+	HandleQuery(conn *Conn, query string) (*Result, error)
 	//handle COM_FILED_LIST command
 	HandleFieldList(table string, fieldWildcard string) ([]*Field, error)
 	//handle COM_STMT_PREPARE, params is the param number for this statement, columns is the column number
@@ -28,6 +28,13 @@ type Handler interface {
 	//handle any other command that is not currently handled by the library,
 	//default implementation for this method will return an ER_UNKNOWN_ERROR
 	HandleOtherCommand(cmd byte, data []byte) error
+}
+
+// ConnQuery query in a connection
+type ConnQuery struct {
+	RemoteAddr string
+	DB         string // Current database name
+	String     string // The Query string
 }
 
 func (c *Conn) HandleCommand() error {
@@ -67,7 +74,7 @@ func (c *Conn) dispatch(data []byte) interface{} {
 		c.Conn = nil
 		return noResponse{}
 	case COM_QUERY:
-		if r, err := c.h.HandleQuery(hack.String(data)); err != nil {
+		if r, err := c.h.HandleQuery(c, hack.String(data)); err != nil {
 			return err
 		} else {
 			return r
@@ -75,7 +82,7 @@ func (c *Conn) dispatch(data []byte) interface{} {
 	case COM_PING:
 		return nil
 	case COM_INIT_DB:
-		if err := c.h.UseDB(hack.String(data)); err != nil {
+		if err := c.h.UseDB(c, hack.String(data)); err != nil {
 			return err
 		} else {
 			return nil
